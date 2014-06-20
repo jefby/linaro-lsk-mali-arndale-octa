@@ -2481,7 +2481,7 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 
 	attribute_count = kbasep_get_config_attribute_count(config->attributes);
 
-	kbasep_config_parse_io_resources(config->io_resources, resources);
+	//kbasep_config_parse_io_resources(config->io_resources, resources);
 
 	err = platform_device_add_data(pdev, config->attributes, attribute_count * sizeof(config->attributes[0]));
 	if (err)
@@ -2780,89 +2780,20 @@ static const struct of_device_id mali_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, mali_of_match);
 
-static struct platform_driver kbase_platform_driver = {
-	.probe = kbase_platform_device_probe,
-	.remove = kbase_platform_device_remove,
-	.driver = {
-		   .name = kbase_drv_name,
-		   .owner = THIS_MODULE,
-		   .pm = &kbase_pm_ops,
-		   .of_match_table = mali_of_match,
-		   },
+static struct platform_driver kbase_platform_driver =
+{
+	.probe		= kbase_platform_device_probe,
+	.remove		= kbase_platform_device_remove,
+	.driver		=
+	{
+		.name		= kbase_drv_name,
+		.owner		= THIS_MODULE,
+		.pm 		= &kbase_pm_ops,
+		.of_match_table = mali_of_match,
+	},
 };
 
-#ifdef CONFIG_MALI_PLATFORM_FAKE
-static struct platform_device *mali_device;
-#endif /* CONFIG_MALI_PLATFORM_FAKE */
-
-static int __init kbase_driver_init(void)
-{
-	int err;
-#ifdef CONFIG_MALI_PLATFORM_FAKE
-	kbase_platform_config *config;
-	int attribute_count;
-	struct resource resources[PLATFORM_CONFIG_RESOURCE_COUNT];
-
-	config = kbase_get_platform_config();
-	if (config == NULL)
-	{
-		printk(KERN_ERR KBASE_DRV_NAME "couldn't get platform config\n");
-		return -ENODEV;
-	}
-
-	attribute_count = kbasep_get_config_attribute_count(config->attributes);
-#ifdef CONFIG_MACH_MANTA
-	err = platform_device_add_data(&exynos5_device_g3d, config->attributes, attribute_count * sizeof(config->attributes[0]));
-	if (err)
-		return err;
-#else
-
-	mali_device = platform_device_alloc(kbase_drv_name, 0);
-	if (mali_device == NULL)
-		return -ENOMEM;
-
-	kbasep_config_parse_io_resources(config->io_resources, resources);
-	err = platform_device_add_resources(mali_device, resources, PLATFORM_CONFIG_RESOURCE_COUNT);
-	if (err) {
-		platform_device_put(mali_device);
-		mali_device = NULL;
-		return err;
-	}
-
-	err = platform_device_add_data(mali_device, config->attributes, attribute_count * sizeof(config->attributes[0]));
-	if (err) {
-		platform_device_unregister(mali_device);
-		mali_device = NULL;
-		return err;
-	}
-
-	err = platform_device_add(mali_device);
-	if (err) {
-		platform_device_unregister(mali_device);
-		mali_device = NULL;
-		return err;
-	}
-#endif /* CONFIG_CONFIG_MACH_MANTA */
-#endif /* CONFIG_MALI_PLATFORM_FAKE */
-	err = platform_driver_register(&kbase_platform_driver);
-	if (err)
-		return err;
-
-	return 0;
-}
-
-static void __exit kbase_driver_exit(void)
-{
-	platform_driver_unregister(&kbase_platform_driver);
-#ifdef CONFIG_MALI_PLATFORM_FAKE
-	if (mali_device)
-		platform_device_unregister(mali_device);
-#endif /* CONFIG_MALI_PLATFORM_FAKE */
-}
-
-module_init(kbase_driver_init);
-module_exit(kbase_driver_exit);
-
+module_platform_driver(kbase_platform_driver);
 MODULE_LICENSE("GPL");
 MODULE_VERSION(MALI_RELEASE_NAME);
 

@@ -499,8 +499,9 @@ const kbase_attribute config_attributes_exynos5420[] = {
 	}
 };
 
-kbase_platform_config chromebook_platform_config;
+kbase_platform_config platform_config;
 kbase_platform_config *kbase_get_platform_config(void) {
+#if 0
 	if (soc_is_exynos5250())
     {
             chromebook_platform_config.attributes = config_attributes_exynos5250;
@@ -510,6 +511,11 @@ kbase_platform_config *kbase_get_platform_config(void) {
     }
 
    return NULL;
+#endif
+	platform_config.attributes = config_attributes_exynos5420;
+	
+	platform_config.midgard_type = KBASE_MALI_T604;
+	return &platform_config;
 }
 
 static struct clk *clk_g3d = NULL;
