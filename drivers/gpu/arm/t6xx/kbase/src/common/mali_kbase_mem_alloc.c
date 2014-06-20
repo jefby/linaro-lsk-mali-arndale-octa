@@ -25,6 +25,48 @@
 #include <linux/mm.h>
 #include <linux/atomic.h>
 
+atomic_t mali_memory_pages;
+
+static unsigned long kbase_mem_allocator_count(struct shrinker *s,
+						struct shrink_control *sc)
+{
+	kbase_mem_allocator *allocator;
+	allocator = container_of(s, kbase_mem_allocator, free_list_reclaimer);
+	return atomic_read(&allocator->free_list_size);
+}
+
+static unsigned long kbase_mem_allocator_scan(struct shrinker *s,
+						struct shrink_control *sc)
+{
+	kbase_mem_allocator *allocator;
+	int i;
+	int freed;
+
+	allocator = container_of(s, kbase_mem_allocator, free_list_reclaimer);
+
+	might_sleep();
+
+	mutex_lock(&allocator->free_list_lock);
+	i = MIN(atomic_read(&allocator->free_list_size), sc->nr_to_scan);
+	freed = i;
+
+	atomic_sub(i, &allocator->free_list_size);
+
+	while (i--) {
+		struct page *p;
+
+		BUG_ON(list_empty(&allocator->free_list_head));
+		p = list_first_entry(&allocator->free_list_head,
+					struct page, lru);
+		list_del(&p->lru);
+		__free_page(p);
+	}
+	mutex_unlock(&allocator->free_list_lock);
+	return atomic_read(&allocator->free_list_size);
+
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0)
 STATIC int kbase_mem_allocator_shrink(struct shrinker *s, struct shrink_control *sc)
 {
 	kbase_mem_allocator * allocator;
@@ -56,6 +98,7 @@ STATIC int kbase_mem_allocator_shrink(struct shrinker *s, struct shrink_control 
 	mutex_unlock(&allocator->free_list_lock);
 	return atomic_read(&allocator->free_list_size);
 }
+#endif
 
 mali_error kbase_mem_allocator_init(kbase_mem_allocator * const allocator, unsigned int max_size)
 {
@@ -68,9 +111,17 @@ mali_error kbase_mem_allocator_init(kbase_mem_allocator * const allocator, unsig
 	atomic_set(&allocator->free_list_size, 0);
 
 	allocator->free_list_max_size = max_size;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 0)
 	allocator->free_list_reclaimer.shrink = kbase_mem_allocator_shrink;
+#else
+	allocator->free_list_reclaimer.count_objects =
+						kbase_mem_allocator_count;
+	allocator->free_list_reclaimer.scan_objects = kbase_mem_allocator_scan;
+#endif
 	allocator->free_list_reclaimer.seeks = DEFAULT_SEEKS;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0) /* Kernel versions prior to 3.1 : struct shrinker does not define batch */
+	/* Kernel versions prior to 3.1 :
+	 * struct shrinker does not define batch */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 1, 0)
 	allocator->free_list_reclaimer.batch = 0;
 #endif
 
@@ -132,7 +183,7 @@ mali_error kbase_mem_allocator_alloc(kbase_mem_allocator *allocator, u32 nr_page
 	}
 
 	if (i == nr_pages)
-		return MALI_ERROR_NONE;
+		goto alloc_success;
 
 	/* If not all pages were sourced from the pool, request new ones. */
 	for (; i < nr_pages; i++)
@@ -154,6 +205,8 @@ mali_error kbase_mem_allocator_alloc(kbase_mem_allocator *allocator, u32 nr_page
 		pages[i] = PFN_PHYS(page_to_pfn(p));
 	}
 
+alloc_success:
+	atomic_add(nr_pages, &mali_memory_pages);
 	return MALI_ERROR_NONE;
 
 err_out_roll_back:
@@ -186,8 +239,8 @@ void kbase_mem_allocator_free(kbase_mem_allocator *allocator, u32 nr_pages, phys
 	* or get too many on the free list, but the max_size is just a ballpark so it is ok
 	* providing that tofree doesn't exceed nr_pages
 	*/
-	tofree = MAX((int)allocator->free_list_max_size - atomic_read(&allocator->free_list_size),0);
-	tofree = nr_pages - MIN(tofree, nr_pages);
+	tofree = atomic_read(&allocator->free_list_size) + nr_pages - allocator->free_list_max_size;
+	/* if tofree became negative this first for loop will be ignored */
 	for (; i < tofree; i++)
 	{
 		if (likely(0 != pages[i]))
@@ -225,6 +278,7 @@ void kbase_mem_allocator_free(kbase_mem_allocator *allocator, u32 nr_pages, phys
 			page_count++;
 		}
 	}
+	atomic_sub(nr_pages, &mali_memory_pages);
 	mutex_lock(&allocator->free_list_lock);
 	list_splice(&new_free_list_items, &allocator->free_list_head);
 	atomic_add(page_count, &allocator->free_list_size);
