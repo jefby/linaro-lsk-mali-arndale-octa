@@ -312,7 +312,7 @@ struct exynos_context
 	struct clk *sclk_g3d;
 	int t6xx_default_clock;
 };
-
+#if 0
 static kbase_io_resources io_resources_exynos5250 =
 {
         .job_irq_number   = EXYNOS5_JOB_IRQ_NUMBER,
@@ -324,7 +324,7 @@ static kbase_io_resources io_resources_exynos5250 =
                 .end   = EXYNOS5_PA_G3D + (4096 * 5) - 1
         }
 };
-
+#endif
 
 /**
  * Read the CPU clock speed
