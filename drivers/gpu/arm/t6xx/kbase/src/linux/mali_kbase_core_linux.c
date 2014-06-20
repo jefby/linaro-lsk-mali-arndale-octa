@@ -2468,7 +2468,6 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 	mali_error mali_err;
 #endif /* CONFIG_MALI_NO_MALI */
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0) && CONFIG_CHROMEOS
 	kbase_platform_config *config;
 	int attribute_count;
 	struct resource resources[PLATFORM_CONFIG_RESOURCE_COUNT];
@@ -2487,7 +2486,6 @@ static int kbase_platform_device_probe(struct platform_device *pdev)
 	err = platform_device_add_data(pdev, config->attributes, attribute_count * sizeof(config->attributes[0]));
 	if (err)
 		goto out;
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0) && CONFIG_CHROMEOS */
 
 	kbdev = kbase_device_alloc();
 	if (!kbdev) {
@@ -2774,7 +2772,6 @@ static const struct dev_pm_ops kbase_pm_ops = {
 #endif /* CONFIG_PM_RUNTIME */
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0) && CONFIG_CHROMEOS
 static const struct of_device_id mali_of_match[] = {
 	{
 		.compatible = "arm,mali",
@@ -2782,7 +2779,6 @@ static const struct of_device_id mali_of_match[] = {
 	{},
 };
 MODULE_DEVICE_TABLE(of, mali_of_match);
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0) && CONFIG_CHROMEOS */
 
 static struct platform_driver kbase_platform_driver = {
 	.probe = kbase_platform_device_probe,
@@ -2791,9 +2787,7 @@ static struct platform_driver kbase_platform_driver = {
 		   .name = kbase_drv_name,
 		   .owner = THIS_MODULE,
 		   .pm = &kbase_pm_ops,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0) && CONFIG_CHROMEOS
 		   .of_match_table = mali_of_match,
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0) && CONFIG_CHROMEOS */
 		   },
 };
 
@@ -2805,7 +2799,6 @@ static int __init kbase_driver_init(void)
 {
 	int err;
 #ifdef CONFIG_MALI_PLATFORM_FAKE
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)) || !CONFIG_CHROMEOS
 	kbase_platform_config *config;
 	int attribute_count;
 	struct resource resources[PLATFORM_CONFIG_RESOURCE_COUNT];
@@ -2850,7 +2843,6 @@ static int __init kbase_driver_init(void)
 		return err;
 	}
 #endif /* CONFIG_CONFIG_MACH_MANTA */
-#endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)) || !CONFIG_CHROMEOS */
 #endif /* CONFIG_MALI_PLATFORM_FAKE */
 	err = platform_driver_register(&kbase_platform_driver);
 	if (err)
