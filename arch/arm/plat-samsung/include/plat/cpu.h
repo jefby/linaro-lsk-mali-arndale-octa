@@ -47,6 +47,7 @@ extern unsigned long samsung_cpu_id;
 
 #define EXYNOS5250_SOC_ID	0x43520000
 #define EXYNOS5420_SOC_ID	0xE5420000
+#define EXYNOS5422_SOC_ID	0xE5422000
 #define EXYNOS5440_SOC_ID	0xE5440000
 #define EXYNOS5_SOC_MASK	0xFFFFF000
 
@@ -69,6 +70,7 @@ IS_SAMSUNG_CPU(exynos4212, EXYNOS4212_CPU_ID, EXYNOS4_CPU_MASK)
 IS_SAMSUNG_CPU(exynos4412, EXYNOS4412_CPU_ID, EXYNOS4_CPU_MASK)
 IS_SAMSUNG_CPU(exynos5250, EXYNOS5250_SOC_ID, EXYNOS5_SOC_MASK)
 IS_SAMSUNG_CPU(exynos5420, EXYNOS5420_SOC_ID, EXYNOS5_SOC_MASK)
+IS_SAMSUNG_CPU(exynos5422, EXYNOS5422_SOC_ID, EXYNOS5_SOC_MASK)
 IS_SAMSUNG_CPU(exynos5440, EXYNOS5440_SOC_ID, EXYNOS5_SOC_MASK)
 
 #if defined(CONFIG_CPU_S3C2410) || defined(CONFIG_CPU_S3C2412) || \
@@ -150,9 +152,15 @@ IS_SAMSUNG_CPU(exynos5440, EXYNOS5440_SOC_ID, EXYNOS5_SOC_MASK)
 
 #if defined(CONFIG_SOC_EXYNOS5420)
 # define soc_is_exynos5420()	is_samsung_exynos5420()
+# define soc_is_exynos5422()	is_samsung_exynos5422()
+# define soc_is_exynos542x()	(soc_is_exynos5420() || soc_is_exynos5422())
 #else
 # define soc_is_exynos5420()	0
+# define soc_is_exynos5422()	0
+# define soc_is_exynos542x()	0
 #endif
+
+#define EXYNOS5420_REV_0	0x0
 
 #if defined(CONFIG_SOC_EXYNOS5440)
 # define soc_is_exynos5440()	is_samsung_exynos5440()
@@ -195,6 +203,7 @@ extern void s3c_init_cpu(unsigned long idcode,
 
 /* core initialisation functions */
 
+extern void s3c24xx_init_irq(void);
 extern void s5p_init_irq(u32 *vic, u32 num_vic);
 
 extern void s3c24xx_init_io(struct map_desc *mach_desc, int size);
@@ -212,6 +221,10 @@ extern void s3c24xx_init_clocks(int xtal);
 extern void s3c24xx_init_uartdevs(char *name,
 				  struct s3c24xx_uart_resources *res,
 				  struct s3c2410_uartcfg *cfg, int no);
+
+/* timer for 2410/2440 */
+
+extern void s3c24xx_timer_init(void);
 
 extern struct syscore_ops s3c2410_pm_syscore_ops;
 extern struct syscore_ops s3c2412_pm_syscore_ops;

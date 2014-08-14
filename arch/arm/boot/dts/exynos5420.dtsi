@@ -641,12 +641,12 @@
 	};
 
 	mali {
-		compatible = "arm,malit6xx";
+		compatible = "arm,mali-midgard";
 		reg = <0x11800000 0x5000>;
 		interrupts = <0 219 0>, <0 74 0>, <0 117 0>;
 		interrupt-names = "JOB", "MMU", "GPU";
-		clocks = <&clock 501>, <&clock 500>;
-		clock-names = "g3d", "aclk_g3d";
+		clocks = <&clock 501>, <&clock 641>, <&clock 642>, <&clock 1>, <&clock 9>;
+		clock-names = "g3d", "aclk_g3d", "mout_vpll", "ext_xtal", "fout_vpll";
 	};
 
 	hdmi@14530000 {
